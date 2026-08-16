@@ -13,7 +13,7 @@ deprecated = false
 icon = "music"
 description = "Spotify controller with album art, seekable progress bar, and playback controls via MPRIS."
 tags = ["bar", "panel", "media"]
-dependencies = ["playerctl"]
+dependencies = []
 
 # ── Plugin-level settings ──────────────────────────────────────────────────────
 
