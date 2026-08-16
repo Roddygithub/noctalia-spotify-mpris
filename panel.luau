@@ -304,7 +304,7 @@ function render()
 		if info then table.insert(body, info) end
 	end
 
-	panel.render(ui.column({ gap = 12, padding = 16, width = 380 }, body))
+	panel.render(ui.column({ gap = 12, padding = 16, width = 380, fill = "surface", radius = 12 }, body))
 end
 
 function onOpen(_context) render() end
