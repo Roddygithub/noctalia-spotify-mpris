@@ -1,0 +1,82 @@
+# Noctalia v5 plugin manifest for Spotify MPRIS Controller
+# Plugin system is beta; APIs may change before v5 stable.
+#
+# plugin_api = 16: targets the last released level of v5.0.0.
+
+id = "roddygithub/spotify-mpris"
+name = "Spotify MPRIS"
+version = "1.0.0"
+plugin_api = 16
+author = "roddygithub"
+license = "MIT"
+deprecated = false
+icon = "music"
+description = "Spotify controller with album art, seekable progress bar, and playback controls via MPRIS."
+tags = ["bar", "panel", "media"]
+dependencies = ["playerctl"]
+
+# ── Plugin-level settings ──────────────────────────────────────────────────────
+
+[[setting]]
+key = "update_interval"
+type = "int"
+label_key = "settings.update_interval.label"
+description_key = "settings.update_interval.description"
+default = 1000
+min = 500
+max = 5000
+
+[[setting]]
+key = "show_artist"
+type = "bool"
+label_key = "settings.show_artist.label"
+description_key = "settings.show_artist.description"
+default = true
+
+[[setting]]
+key = "show_album_art"
+type = "bool"
+label_key = "settings.show_album_art.label"
+description_key = "settings.show_album_art.description"
+default = true
+
+[[setting]]
+key = "filter_player"
+type = "select"
+label_key = "settings.filter_player.label"
+description_key = "settings.filter_player.description"
+default = "spotify"
+options = [
+  { value = "spotify", label_key = "settings.filter_player.spotify" },
+  { value = "any", label_key = "settings.filter_player.any" },
+]
+
+# ── Entries ────────────────────────────────────────────────────────────────────
+# Three entries: a background service that talks MPRIS via playerctl, a bar widget, and a panel.
+
+[[service]]
+id = "mpris"
+entry = "service.luau"
+
+[[widget]]
+id = "bar"
+entry = "widget.luau"
+
+[[panel]]
+id = "details"
+entry = "panel.luau"
+width = 400
+height = 520
+placement = "attached"
+position = "auto"
+open_near_click = true
+keyboard_focus = "on_demand"
+
+[[panel]]
+id = "details_floating"
+entry = "panel.luau"
+width = 400
+height = 520
+placement = "floating"
+position = "center"
+keyboard_focus = "on_demand"
