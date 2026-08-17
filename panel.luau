@@ -36,16 +36,18 @@ end
 -- ── Album art hero card ────────────────────────────────────────────────────────
 local function heroCard(player)
 	local showArt = noctalia.getConfig("show_album_art") == true
-	local artUrl = player.artUrl or ""
 	local playing = player.playbackState == "Playing"
 
-	-- Verify art URL is accessible (basic check for file:// URLs)
-	local hasArt = showArt and artUrl ~= ""
-	if hasArt and artUrl:sub(1, 7) == "file://" then
-		local path = artUrl:sub(8)
-		if not noctalia.fileExists(path) then
-			hasArt = false
-		end
+	-- Art is shown only when we have a loadable local file. HTTPS URLs are
+	-- downloaded by the service to player.artPath; until that lands we show
+	-- a placeholder instead of handing a remote URL to the image loader.
+	local artPath = player.artPath or ""
+	if artPath:sub(1, 7) == "file://" then
+		artPath = artPath:sub(8)
+	end
+	local hasArt = showArt and artPath ~= ""
+	if hasArt and not noctalia.fileExists(artPath) then
+		hasArt = false
 	end
 
 	local title = player.trackTitle or "—"
@@ -57,7 +59,7 @@ local function heroCard(player)
 
 	return ui.column({ gap = 12, padding = 16, align = "center" }, {
 		hasArt and ui.image({
-			path = artUrl,
+			path = artPath,
 			width = 200,
 			height = 200,
 			radius = 8,
@@ -66,7 +68,7 @@ local function heroCard(player)
 			ui.glyph({ name = "music", size = 64, color = "primary/0.5" }),
 		}),
 
-		ui.column({ gap = 4, align = "center", width = 340 }, {
+		ui.column({ gap = 4, align = "center", width = 400 }, {
 			ui.label({ text = title, fontSize = 18, fontWeight = "bold", color = "on_surface", maxLines = 1, elide = "end" }),
 			ui.label({ text = artist, fontSize = 14, color = "on_surface_variant", maxLines = 1, elide = "end" }),
 			album ~= "" and ui.label({ text = album, fontSize = 12, color = "on_surface/0.6", maxLines = 1, elide = "end" }) or nil,
@@ -105,7 +107,7 @@ local function progressSection(player)
 	local st = dragState[player.identity or "default"]
 	local sliderValue = (st and st.dragging and st.position) or position
 
-	return ui.column({ gap = 4, width = 360 }, {
+	return ui.column({ gap = 4, width = 420 }, {
 		ui.slider({
 			min = 0,
 			max = length,
@@ -122,7 +124,7 @@ local function progressSection(player)
 				sendCmd({ op = "seek", offset = tostring(target) })
 			end
 		}),
-		ui.row({ justify = "space_between", width = 360 }, {
+		ui.row({ justify = "space_between", width = 420 }, {
 			ui.label({ text = fmtTime(sliderValue), fontSize = 10, color = "on_surface_variant" }),
 			ui.label({ text = fmtTime(length), fontSize = 10, color = "on_surface_variant" }),
 		}),
@@ -206,7 +208,7 @@ local function volumeSection(player)
 	local volume = tonumber(player.volume) or 1.0
 	local canControl = player.canControl == true
 
-	return ui.column({ gap = 6, width = 360, align = "center" }, {
+	return ui.column({ gap = 6, width = 420, align = "center" }, {
 		ui.row({ gap = 8, align = "center" }, {
 			ui.glyph({ name = volume > 0.5 and "volume-high" or (volume > 0 and "volume-low" or "volume-off"), size = 16, color = "on_surface_variant" }),
 			ui.slider({
@@ -216,7 +218,7 @@ local function volumeSection(player)
 				value = math.floor(volume * 100),
 				controlSize = "sm",
 				enabled = canControl,
-				width = 200,
+width = 260,
 				onChange = function(v)
 					sendCmd({ op = "volume", volume = tostring((tonumber(v) or 0) / 100) })
 				end,
@@ -304,7 +306,7 @@ function render()
 		if info then table.insert(body, info) end
 	end
 
-	panel.render(ui.column({ gap = 12, padding = 16, width = 380, fill = "surface", radius = 12 }, body))
+	panel.render(ui.column({ gap = 12, padding = 16, width = 440, fill = "surface", radius = 12 }, body))
 end
 
 function onOpen(_context) render() end

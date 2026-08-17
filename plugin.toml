@@ -65,8 +65,8 @@ entry = "widget.luau"
 [[panel]]
 id = "details"
 entry = "panel.luau"
-width = 400
-height = 520
+width = 460
+height = 560
 placement = "attached"
 position = "auto"
 open_near_click = true
@@ -75,8 +75,8 @@ keyboard_focus = "on_demand"
 [[panel]]
 id = "details_floating"
 entry = "panel.luau"
-width = 400
-height = 520
+width = 460
+height = 560
 placement = "floating"
 position = "center"
 keyboard_focus = "on_demand"

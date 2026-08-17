@@ -11,7 +11,7 @@ local PLUGIN_ID = "roddygithub/spotify-mpris"
 --   noctalia.state "sp.backend"   : { available=bool, name=string }
 --   noctalia.state "sp.player"    : { identity, name, playbackState, loopStatus, canGoNext, canGoPrevious,
 --                                     canControl, canSeek, volume, position, length,
---                                     trackTitle, trackArtists, trackAlbum, artUrl,
+--                                     trackTitle, trackArtists, trackAlbum, artUrl, artPath,
 --                                     shuffle, metadata }
 --   noctalia.state "sp.cmd"       : { op=string, [args...] }
 --                                   written by UI entries; service executes and clears.
@@ -22,58 +22,104 @@ local function shellQuote(s)
 	return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
 end
 
+local function parseGdbusScalar(s)
+	s = s:gsub("^%s+", ""):gsub("%s+$", "")
+	if s == "true" then return true end
+	if s == "false" then return false end
+	-- typed ints like "int64 59148000", "uint32 3"
+	local typed = s:match("^[%a_]+%s+(%-?%d+)$")
+	if typed then return tonumber(typed) end
+	local n = tonumber(s)
+	if n then return n end
+	-- quoted string: '...' or "..."
+	local q = s:match("^'(.*)'$") or s:match('^"(.*)"$')
+	if q then return q end
+	return s
+end
+
+local function parseGdbusArray(raw)
+	if not raw then return {} end
+	local arr = raw:match("^%[(.*)%]$")
+	if not arr then return {} end
+	local out = {}
+	local pos = 1
+	while pos <= #arr do
+		local c = arr:sub(pos, pos)
+		if c == "'" or c == '"' then
+			local endq = arr:find(c, pos + 1, true)
+			if endq then
+				table.insert(out, arr:sub(pos + 1, endq - 1))
+				pos = endq + 1
+			else
+				pos = pos + 1
+			end
+		else
+			pos = pos + 1
+		end
+	end
+	return out
+end
+
 local function parseGdbusValue(raw)
 	if not raw then return nil end
 	raw = raw:gsub("^%s+", ""):gsub("%s+$", "")
-	-- variant form: (<value>,)
-	local inner = raw:match("^%(<(.+)>%,?%)?$")
-	if inner then
-		if inner == "true" then return true end
-		if inner == "false" then return false end
-		local n = tonumber(inner)
-		if n then return n end
-		local s = inner:match("^'(.*)'$") or inner:match('^"(.*)"$')
-		if s then return s end
-		return inner
+	-- strip outer parens: (...,)
+	local content = raw:match("^%((.*)%)$")
+	if content then
+		content = content:gsub(",%s*$", "")
+	else
+		content = raw
 	end
-	-- bare form: (true,) (false,) (-1,)
-	local bare = raw:match("^%((.-)%,?%)$")
-	if bare == nil then bare = raw end
-	bare = bare:gsub("%s+$", ""):gsub(",%s*$", "")
-	if bare == "true" then return true end
-	if bare == "false" then return false end
-	local n = tonumber(bare)
-	if n then return n end
-	local s = bare:match("^'(.*)'$") or bare:match('^"(.*)"$')
-	if s then return s end
-	return bare
-end
-
-local function parseGdbusStringArray(raw)
-	if not raw then return {} end
-	local arr = raw:match("%[(.-)%]")
-	if not arr then return {} end
-	local out = {}
-	for item in arr:gmatch("'([^']*)'") do
-		table.insert(out, item)
+	-- strip angle-bracket variant wrapper: <...>
+	content = content:match("^<(.+)>$") or content
+	if content:sub(1, 1) == "[" then
+		return parseGdbusArray(content)
 	end
-	return out
+	return parseGdbusScalar(content)
 end
 
 local function parseGdbusDict(raw)
 	-- Parse a{sv} dict like: ({'key': <'value'>, ...},)
 	if not raw then return {} end
 	local out = {}
-	-- Simple key-value extraction
 	for k, v in raw:gmatch("'([^']+)'%s*:%s*<([^>]+)>") do
-		out[k] = parseGdbusValue("<" .. v .. ">")
+		out[k] = parseGdbusValue(v)
 	end
 	return out
+end
+
+-- Download HTTPS album art to local temp file (async via noctalia.runAsync)
+local function downloadArtwork(url, trackId, onDone)
+	if not url or url == "" then
+		if onDone then onDone(nil) end
+		return
+	end
+	if url:sub(1, 7) == "file://" then
+		if onDone then onDone(url:sub(8)) end
+		return
+	end
+	if url:sub(1, 4) ~= "http" then
+		if onDone then onDone(nil) end
+		return
+	end
+	local filename = "/tmp/spotify-mpris-art-" .. tostring(trackId or "unknown"):gsub("[^%w]", "_") .. ".jpg"
+	local cmd = "curl -sL --max-time 5 -o " .. filename .. " " .. url
+	noctalia.runAsync(cmd, function(res)
+		if res and noctalia.fileExists(filename) then
+			noctalia.log("[spotify-mpris] album art downloaded: " .. filename)
+			if onDone then onDone(filename) end
+		else
+			noctalia.log("[spotify-mpris] album art download failed for " .. url .. " err=" .. tostring(res and res.error))
+			if onDone then onDone(nil) end
+		end
+	end)
 end
 
 -- ── Player state ──────────────────────────────────────────────────────────────
 local playerState = {}
 local lastPlayerIdentity = nil
+local lastArtTrackId = nil
+local artCache = {} -- trackId -> local file path
 
 local function publishPlayer()
 	noctalia.state.set("sp.player", playerState)
@@ -86,6 +132,13 @@ end
 -- ── Fetch all metadata via gdbus ──────────────────────────────────────────────
 -- DEFINED BEFORE discoverPlayer because discoverPlayer calls fetchMetadata
 local function buildPlayerState(busName, metadata, playerProps)
+	-- Extract track info from metadata
+	local title = metadata["xesam:title"] or ""
+	local artists = metadata["xesam:artist"] or {}
+	local album = metadata["xesam:album"] or ""
+	local artUrl = metadata["mpris:artUrl"] or ""
+	local trackId = metadata["mpris:trackid"] or ""
+
 	local function parseBool(v)
 		if v == nil then return false end
 		if type(v) == "boolean" then return v end
@@ -108,12 +161,14 @@ local function buildPlayerState(busName, metadata, playerProps)
 		return math.floor(n or 0)
 	end
 
-	-- Extract track info from metadata
-	local title = metadata["xesam:title"] or ""
-	local artists = metadata["xesam:artist"] or {}
-	local album = metadata["xesam:album"] or ""
-	local artUrl = metadata["mpris:artUrl"] or ""
-	local trackId = metadata["mpris:trackid"] or ""
+	-- artPath is resolved synchronously only for file:// URLs; HTTPS art is
+	-- downloaded async once per track and cached so later polls keep it.
+	local artPath = nil
+	if artUrl:sub(1, 7) == "file://" then
+		artPath = artUrl:sub(8)
+	elseif artCache[trackId] then
+		artPath = artCache[trackId]
+	end
 
 	-- Normalize artists to array
 	if type(artists) == "string" then artists = { artists } end
@@ -141,6 +196,7 @@ local function buildPlayerState(busName, metadata, playerProps)
 		trackArtists = artists,
 		trackAlbum = album,
 		artUrl = artUrl,
+		artPath = artPath,
 		trackId = trackId,
 		shuffle = parseBool(playerProps["Shuffle"]),
 		metadata = metadata,
@@ -148,6 +204,18 @@ local function buildPlayerState(busName, metadata, playerProps)
 
 	publishPlayer()
 	publishBackend(true, playerState.name)
+
+	-- Kick off async HTTPS art download once per track
+	if artPath == nil and artUrl:sub(1, 4) == "http" and trackId ~= lastArtTrackId then
+		lastArtTrackId = trackId
+		downloadArtwork(artUrl, trackId, function(path)
+			if path then
+				artCache[trackId] = path
+				playerState.artPath = path
+				publishPlayer()
+			end
+		end)
+	end
 end
 
 local function fetchMetadataDetails(busName, playerProps)
@@ -162,14 +230,12 @@ local function fetchMetadataDetails(busName, playerProps)
 		local metadata = {}
 		if res and not res.error then
 			metadata = parseGdbusDict(res.stdout or "")
+			buildPlayerState(busName, metadata, playerProps)
 		end
-
-		buildPlayerState(busName, metadata, playerProps)
 	end)
 end
 
 local function fetchMetadata(busName)
-	-- Get the player object path
 	local objPath = "/org/mpris/MediaPlayer2"
 
 	-- GetAll on Player interface
@@ -209,7 +275,6 @@ local function discoverPlayer()
 		cmd = "gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.ListNames | grep -o 'org.mpris.MediaPlayer2[^,]*' | head -1"
 	end
 
-
 	noctalia.runAsync(cmd, function(res)
 		if not res or res.error or not res.stdout or res.stdout == "" then
 			if next(playerState) ~= nil then
@@ -231,72 +296,6 @@ local function discoverPlayer()
 		lastPlayerIdentity = busName
 		fetchMetadata(busName)
 	end)
-end
-
--- ── Helpers ────────────────────────────────────────────────────────────────────
-local function shellQuote(s)
-	return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
-end
-
-local function parseGdbusValue(raw)
-	if not raw then return nil end
-	raw = raw:gsub("^%s+", ""):gsub("%s+$", "")
-	-- variant form: (<value>,)
-	local inner = raw:match("^%(<(.+)>%,?%)?$")
-	if inner then
-		if inner == "true" then return true end
-		if inner == "false" then return false end
-		local n = tonumber(inner)
-		if n then return n end
-		local s = inner:match("^'(.*)'$") or inner:match('^"(.*)"$')
-		if s then return s end
-		return inner
-	end
-	-- bare form: (true,) (false,) (-1,)
-	local bare = raw:match("^%((.-)%,?%)$")
-	if bare == nil then bare = raw end
-	bare = bare:gsub("%s+$", ""):gsub(",%s*$", "")
-	if bare == "true" then return true end
-	if bare == "false" then return false end
-	local n = tonumber(bare)
-	if n then return n end
-	local s = bare:match("^'(.*)'$") or bare:match('^"(.*)"$')
-	if s then return s end
-	return bare
-end
-
-local function parseGdbusStringArray(raw)
-	if not raw then return {} end
-	local arr = raw:match("%[(.-)%]")
-	if not arr then return {} end
-	local out = {}
-	for item in arr:gmatch("'([^']*)'") do
-		table.insert(out, item)
-	end
-	return out
-end
-
-local function parseGdbusDict(raw)
-	-- Parse a{sv} dict like: ({'key': <'value'>, ...},)
-	if not raw then return {} end
-	local out = {}
-	-- Simple key-value extraction
-	for k, v in raw:gmatch("'([^']+)'%s*:%s*<([^>]+)>") do
-		out[k] = parseGdbusValue("<" .. v .. ">")
-	end
-	return out
-end
-
--- ── Player state ──────────────────────────────────────────────────────────────
-local playerState = {}
-local lastPlayerIdentity = nil
-
-local function publishPlayer()
-	noctalia.state.set("sp.player", playerState)
-end
-
-local function publishBackend(available, name)
-	noctalia.state.set("sp.backend", { available = available, name = name or "None" })
 end
 
 -- ── Command execution via gdbus ───────────────────────────────────────────────
