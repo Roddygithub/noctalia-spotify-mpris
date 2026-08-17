@@ -45,10 +45,10 @@ key = "filter_player"
 type = "select"
 label_key = "settings.filter_player.label"
 description_key = "settings.filter_player.description"
-default = "spotify"
+default = "any"
 options = [
-  { value = "spotify", label_key = "settings.filter_player.spotify" },
   { value = "any", label_key = "settings.filter_player.any" },
+  { value = "spotify", label_key = "settings.filter_player.spotify" },
 ]
 
 # ── Entries ────────────────────────────────────────────────────────────────────
