@@ -52,6 +52,29 @@ local function render()
 
 	local container = barWidget.isVertical() and ui.column or ui.row
 	barWidget.render(container({ gap = 5, align = "center" }, children))
+
+	-- Tooltip: "Title — Artist", mirroring the Omaspotify/Omarchy widget.
+	if player.identity and player.trackTitle then
+		local tooltip = player.trackTitle
+		if player.trackArtists and #player.trackArtists > 0 then
+			tooltip = tooltip .. " — " .. player.trackArtists[1]
+		end
+		barWidget.setTooltip(tooltip)
+	else
+		barWidget.setTooltip(nil)
+	end
+end
+
+-- Scroll wheel on the bar widget: up = previous, down = next (Omarchy behavior).
+function onScroll(axis, steps)
+	if axis ~= "vertical" then return end
+	local player = noctalia.state.get("sp.player") or {}
+	if not player.identity then return end
+	if steps < 0 then
+		if player.canGoPrevious == true then sendCmd({ op = "previous" }) end
+	elseif steps > 0 then
+		if player.canGoNext == true then sendCmd({ op = "next" }) end
+	end
 end
 
 function update()

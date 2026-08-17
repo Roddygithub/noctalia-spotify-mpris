@@ -71,6 +71,7 @@ placement = "attached"
 position = "auto"
 open_near_click = true
 keyboard_focus = "on_demand"
+capture_keys = ["space", "Return", "n", "p", "Left", "Right", "ctrl+left", "ctrl+right", "shift+left", "shift+right", "ctrl+up", "ctrl+down", "m", "ctrl+s", "ctrl+r"]
 
 [[panel]]
 id = "details_floating"
@@ -80,3 +81,4 @@ height = 560
 placement = "floating"
 position = "center"
 keyboard_focus = "on_demand"
+capture_keys = ["space", "Return", "n", "p", "Left", "Right", "ctrl+left", "ctrl+right", "shift+left", "shift+right", "ctrl+up", "ctrl+down", "m", "ctrl+s", "ctrl+r"]

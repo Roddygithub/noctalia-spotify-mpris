@@ -12,6 +12,68 @@ local function sendCmd(cmd)
 	noctalia.state.set("sp.cmd", cmd)
 end
 
+-- ── Keyboard shortcuts ────────────────────────────────────────────────────────
+-- Omaspotify base: Space/Enter toggle play, n/Right next, p/Left previous.
+-- Omarchy-Spotify extras (reproducible via MPRIS): Ctrl+Left/Right prev/next,
+-- Shift+Left/Right seek ±10s, Ctrl+Up/Down volume ±5%, M mute, Ctrl+S shuffle,
+-- Ctrl+R repeat. Modifier matching is exact, so chords do not collide.
+local volumeBeforeMute = 0.5
+
+function onKey(chord, pressed)
+	if not pressed then return end
+	local player = noctalia.state.get("sp.player") or {}
+	if not player.identity then return end
+
+	local canGoNext = player.canGoNext == true
+	local canGoPrev = player.canGoPrevious == true
+	local canControl = player.canControl == true
+
+	local function clampSeek(deltaUs)
+		local pos = tonumber(player.position) or 0
+		local len = tonumber(player.length) or 0
+		local target = pos + deltaUs
+		if len > 0 then target = math.max(0, math.min(len, target)) end
+		sendCmd({ op = "seek", offset = tostring(math.floor(target)) })
+	end
+
+	local function clampVolume(delta)
+		local vol = tonumber(player.volume) or 0
+		local nextVol = math.max(0, math.min(1, vol + delta))
+		if nextVol > 0.001 then volumeBeforeMute = nextVol end
+		sendCmd({ op = "volume", volume = tostring(nextVol) })
+	end
+
+	if chord == "space" or chord == "Return" then
+		if canControl then sendCmd({ op = "play_pause" }) end
+	elseif chord == "n" or chord == "Right" or chord == "ctrl+right" then
+		if canGoNext then sendCmd({ op = "next" }) end
+	elseif chord == "p" or chord == "Left" or chord == "ctrl+left" then
+		if canGoPrev then sendCmd({ op = "previous" }) end
+	elseif chord == "shift+right" then
+		if canControl then clampSeek(10 * 1000000) end
+	elseif chord == "shift+left" then
+		if canControl then clampSeek(-10 * 1000000) end
+	elseif chord == "ctrl+up" then
+		if canControl then clampVolume(0.05) end
+	elseif chord == "ctrl+down" then
+		if canControl then clampVolume(-0.05) end
+	elseif chord == "m" then
+		if canControl then
+			local vol = tonumber(player.volume) or 0
+			if vol > 0.001 then
+				volumeBeforeMute = vol
+				sendCmd({ op = "volume", volume = "0" })
+			else
+				sendCmd({ op = "volume", volume = tostring(math.max(0.05, volumeBeforeMute)) })
+			end
+		end
+	elseif chord == "ctrl+s" then
+		if canControl then sendCmd({ op = "shuffle", value = not player.shuffle }) end
+	elseif chord == "ctrl+r" then
+		if canControl then sendCmd({ op = "loop" }) end
+	end
+end
+
 -- ── Media slider drag state ──────────────────────────────────────────────────
 local dragState = {}   -- dragging = true, position = <microseconds>
 
