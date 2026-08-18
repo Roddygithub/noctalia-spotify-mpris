@@ -53,6 +53,7 @@ jobs:
   build-backend:
     name: Build Rust backend
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -97,6 +98,7 @@ jobs:
 
       - name: Build
         run: cd backend && cargo build --release
+        timeout-minutes: 10
 
       - name: Verify binary
         run: ./backend/target/release/noctalia-spotify-backend --help || true
