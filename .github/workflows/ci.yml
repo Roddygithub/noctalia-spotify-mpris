@@ -87,7 +87,13 @@ jobs:
         run: cargo clippy --version
 
       - name: Clippy
-        run: cd backend && cargo clippy -- -D warnings
+        run: cd backend && cargo clippy -- -D warnings --message-format=json 2>&1 | tee clippy-output.json || true
+
+      - name: Check clippy output
+        run: |
+          if [ -f backend/clippy-output.json ]; then
+            cat backend/clippy-output.json | jq -r 'select(.reason=="compiler-message") | "\(.message.spans[0].file_name):\(.message.spans[0].line_start):\(.message.spans[0].column_start): \(.message.message) [\(.message.code.code)]"' || true
+          fi
 
       - name: Build
         run: cd backend && cargo build --release
