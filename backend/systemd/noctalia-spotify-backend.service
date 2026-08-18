@@ -1,0 +1,17 @@
+[Unit]
+Description=Noctalia Spotify Connect Backend
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/roddy
+ExecStart=/home/roddy/.local/bin/noctalia-spotify-backend
+Restart=on-failure
+RestartSec=5
+Environment=RUST_LOG=info
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+TimeoutStartSec=30
+
+[Install]
+WantedBy=default.target

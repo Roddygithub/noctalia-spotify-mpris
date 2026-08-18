@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint-luau:
+    name: Lint Luau
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install selene
+        uses: katahiromz/selene-action@v1
+        with:
+          selene-version: '0.27.0'
+
+      - name: Lint Luau files
+        run: selene service.luau widget.luau panel.luau
+
+  check-python:
+    name: Check Python bridge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check Python syntax
+        run: python3 -m py_compile spotify_backend_bridge.py
+
+  check-toml:
+    name: Validate plugin.toml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install taplo
+        uses: tautil/install-taplo@v1
+
+      - name: Check TOML syntax
+        run: taplo check plugin.toml
+
+  build-backend:
+    name: Build Rust backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            backend/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
+
+      - name: Check formatting
+        run: cd backend && cargo fmt --check
+
+      - name: Clippy
+        run: cd backend && cargo clippy -- -D warnings
+
+      - name: Build
+        run: cd backend && cargo build --release
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: noctalia-spotify-backend
+          path: backend/target/release/noctalia-spotify-backend
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run basic validation
+        run: |
+          # Check all required files exist
+          test -f plugin.toml
+          test -f service.luau
+          test -f widget.luau
+          test -f panel.luau
+          test -f spotify_backend_bridge.py
+          test -f README.md
+          test -f LICENSE
+          echo "All required files present"
+
+  release:
+    name: Create Release
+    needs: [lint-luau, check-python, check-toml, build-backend, test]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download backend binary
+        uses: actions/download-artifact@v4
+        with:
+          name: noctalia-spotify-backend
+          path: dist/
+
+      - name: Create release archive
+        run: |
+          cd dist
+          tar -czf noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz \
+            plugin.toml service.luau widget.luau panel.luau \
+            spotify_backend_bridge.py README.md LICENSE \
+            noctalia-spotify-backend
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz
+          generate_release_notes: true

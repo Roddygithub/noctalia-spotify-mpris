@@ -11,7 +11,7 @@ import os
 
 SOCKET_PATH = os.environ.get(
     "SPOTIFY_BACKEND_SOCKET",
-    os.path.join(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"), "omarchy-spotify/backend.sock")
+    os.path.join(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"), "noctalia-spotify/backend.sock")
 )
 
 def send_request(req: dict) -> dict:
@@ -31,9 +31,9 @@ def send_request(req: dict) -> dict:
                     break
             return json.loads(data.decode().strip())
     except FileNotFoundError:
-        return {"v": 1, "id": req.get("id", 0), "ok": False, "error": {"code": "socket_not_found", "message": f"Backend socket not found at {SOCKET_PATH}. Is omarchy-spotify-backend running?"}}
+        return {"v": 1, "id": req.get("id", 0), "ok": False, "error": {"code": "socket_not_found", "message": f"Backend socket not found at {SOCKET_PATH}. Is noctalia-spotify-backend running?"}}
     except ConnectionRefusedError:
-        return {"v": 1, "id": req.get("id", 0), "ok": False, "error": {"code": "connection_refused", "message": "Backend socket connection refused. Is omarchy-spotify-backend running?"}}
+        return {"v": 1, "id": req.get("id", 0), "ok": False, "error": {"code": "connection_refused", "message": "Backend socket connection refused. Is noctalia-spotify-backend running?"}}
     except socket.timeout:
         return {"v": 1, "id": req.get("id", 0), "ok": False, "error": {"code": "timeout", "message": "Backend request timed out"}}
     except Exception as e:

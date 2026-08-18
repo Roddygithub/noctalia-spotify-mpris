@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            backend/target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('backend/Cargo.lock') }}
+
+      - name: Build backend
+        run: cd backend && cargo build --release
+
+      - name: Verify binary
+        run: |
+          ./backend/target/release/noctalia-spotify-backend --help || true
+
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          tar -czf release/noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz \
+            plugin.toml service.luau widget.luau panel.luau \
+            spotify_backend_bridge.py README.md LICENSE \
+            backend/target/release/noctalia-spotify-backend \
+            backend/systemd/noctalia-spotify-backend.service \
+            backend/scripts/build-backend.sh
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz > noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz.sha256
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz
+            release/noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz.sha256
+          generate_release_notes: true
+          draft: false
+          prerelease: false

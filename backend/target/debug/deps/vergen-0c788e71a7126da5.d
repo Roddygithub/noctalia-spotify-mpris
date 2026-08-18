@@ -1,0 +1,11 @@
+/home/roddy/noctalia-spotify-mpris/backend/target/debug/deps/vergen-0c788e71a7126da5.d: /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/lib.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/constants.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/codegen.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/envvar.rs
+
+/home/roddy/noctalia-spotify-mpris/backend/target/debug/deps/libvergen-0c788e71a7126da5.rlib: /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/lib.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/constants.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/codegen.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/envvar.rs
+
+/home/roddy/noctalia-spotify-mpris/backend/target/debug/deps/libvergen-0c788e71a7126da5.rmeta: /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/lib.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/constants.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/codegen.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/envvar.rs
+
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/lib.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/constants.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/mod.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/codegen.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/vergen-3.2.0/src/output/envvar.rs:

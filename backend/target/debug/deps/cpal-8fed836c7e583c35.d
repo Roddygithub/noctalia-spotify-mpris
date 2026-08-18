@@ -1,0 +1,13 @@
+/home/roddy/noctalia-spotify-mpris/backend/target/debug/deps/cpal-8fed836c7e583c35.d: /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/lib.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/error.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/alsa/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/alsa/enumerate.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/null/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/platform/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/samples_formats.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/traits.rs
+
+/home/roddy/noctalia-spotify-mpris/backend/target/debug/deps/libcpal-8fed836c7e583c35.rmeta: /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/lib.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/error.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/alsa/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/alsa/enumerate.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/null/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/platform/mod.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/samples_formats.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/traits.rs
+
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/lib.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/error.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/mod.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/alsa/mod.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/alsa/enumerate.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/host/null/mod.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/platform/mod.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/samples_formats.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cpal-0.13.5/src/traits.rs:

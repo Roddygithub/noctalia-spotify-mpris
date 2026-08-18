@@ -1,0 +1,9 @@
+/home/roddy/noctalia-spotify-mpris/backend/target/release/deps/zerofrom-1e1ec887ef5a429e.d: /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/lib.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/macro_impls.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/zero_from.rs
+
+/home/roddy/noctalia-spotify-mpris/backend/target/release/deps/libzerofrom-1e1ec887ef5a429e.rlib: /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/lib.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/macro_impls.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/zero_from.rs
+
+/home/roddy/noctalia-spotify-mpris/backend/target/release/deps/libzerofrom-1e1ec887ef5a429e.rmeta: /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/lib.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/macro_impls.rs /home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/zero_from.rs
+
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/lib.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/macro_impls.rs:
+/home/roddy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-0.1.8/src/zero_from.rs:
