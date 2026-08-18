@@ -69,10 +69,15 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-            backend/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}-${{ hashFiles('.github/workflows/ci.yml') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+
+      - name: Print Rust version
+        run: rustc --version && cargo --version
+
+      - name: Clean target
+        run: rm -rf backend/target
 
       - name: Check formatting
         run: cd backend && cargo fmt --check
