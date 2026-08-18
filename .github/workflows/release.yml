@@ -1,6 +1,17 @@
 name: Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as prerelease'
+        required: false
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
@@ -28,6 +39,8 @@ jobs:
             ~/.cargo/git/db
             backend/target
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-
 
       - name: Build backend
         run: cd backend && cargo build --release
@@ -35,6 +48,11 @@ jobs:
       - name: Verify binary
         run: |
           ./backend/target/release/noctalia-spotify-backend --help || true
+
+      - name: Run cargo audit
+        run: |
+          cargo install cargo-audit
+          cd backend && cargo audit
 
       - name: Create release archive
         run: |
@@ -59,4 +77,4 @@ jobs:
             release/noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz.sha256
           generate_release_notes: true
           draft: false
-          prerelease: false
+          prerelease: ${{ github.event.inputs.prerelease == 'true' || false }}

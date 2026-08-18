@@ -2,9 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [master, main]
   pull_request:
-    branches: [master]
+    branches: [master, main]
+
+permissions:
+  contents: read
 
 jobs:
   lint-luau:
@@ -68,6 +71,8 @@ jobs:
             ~/.cargo/git/db
             backend/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Check formatting
         run: cd backend && cargo fmt --check
@@ -78,21 +83,48 @@ jobs:
       - name: Build
         run: cd backend && cargo build --release
 
+      - name: Verify binary
+        run: ./backend/target/release/noctalia-spotify-backend --help || true
+
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
           name: noctalia-spotify-backend
           path: backend/target/release/noctalia-spotify-backend
+          retention-days: 7
 
-  test:
-    name: Test
+  security-audit:
+    name: Security Audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run cargo audit
+        run: |
+          cargo install cargo-audit
+          cd backend && cargo audit
+
+  test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    needs: [build-backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download backend binary
+        uses: actions/download-artifact@v4
+        with:
+          name: noctalia-spotify-backend
+          path: backend/target/release/
+
+      - name: Make binary executable
+        run: chmod +x backend/target/release/noctalia-spotify-backend
+
       - name: Run basic validation
         run: |
-          # Check all required files exist
           test -f plugin.toml
           test -f service.luau
           test -f widget.luau
@@ -100,11 +132,34 @@ jobs:
           test -f spotify_backend_bridge.py
           test -f README.md
           test -f LICENSE
+          test -f backend/target/release/noctalia-spotify-backend
           echo "All required files present"
+
+      - name: Test Python bridge syntax
+        run: python3 -m py_compile spotify_backend_bridge.py
+
+  docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [build-backend, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: noctalia-spotify-mpris:latest
+          load: true
 
   release:
     name: Create Release
-    needs: [lint-luau, check-python, check-toml, build-backend, test]
+    needs: [lint-luau, check-python, check-toml, build-backend, security-audit, test]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -124,10 +179,21 @@ jobs:
           tar -czf noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz \
             plugin.toml service.luau widget.luau panel.luau \
             spotify_backend_bridge.py README.md LICENSE \
-            noctalia-spotify-backend
+            noctalia-spotify-backend \
+            backend/systemd/noctalia-spotify-backend.service \
+            backend/scripts/build-backend.sh
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz > noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz.sha256
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz
+          files: |
+            dist/noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz
+            dist/noctalia-spotify-mpris-${{ github.ref_name }}.tar.gz.sha256
           generate_release_notes: true
+          draft: false
+          prerelease: false
