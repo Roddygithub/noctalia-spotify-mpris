@@ -259,15 +259,15 @@ pub struct PlaylistTracks {
 /// Player state for plugin (simplified)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerState {
-    pub status: String,           // Playing, Paused, Stopped
+    pub status: String, // Playing, Paused, Stopped
     pub title: String,
     pub artist: String,
     pub album: String,
     pub art_url: String,
     pub track_id: String,
-    pub position: u64,            // microseconds
-    pub duration: u64,            // microseconds
-    pub volume: f64,              // 0.0 - 1.0
+    pub position: u64, // microseconds
+    pub duration: u64, // microseconds
+    pub volume: f64,   // 0.0 - 1.0
     pub shuffle: bool,
-    pub loop_status: String,      // None, Track, Playlist
+    pub loop_status: String, // None, Track, Playlist
 }

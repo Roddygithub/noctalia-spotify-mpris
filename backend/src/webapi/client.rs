@@ -73,7 +73,7 @@ impl WebApiClient {
     }
 
     #[allow(dead_code)]
-pub async fn initialize(&self) -> Result<()> {
+    pub async fn initialize(&self) -> Result<()> {
         // Load token from cache
         if let Some(token) = self.cache.get_token().await? {
             if !token.is_expired() {
@@ -379,7 +379,7 @@ pub async fn initialize(&self) -> Result<()> {
     }
 
     #[allow(dead_code)]
-pub async fn get_user_profile(&self) -> Result<UserProfile> {
+    pub async fn get_user_profile(&self) -> Result<UserProfile> {
         self.request(reqwest::Method::GET, "/me", None).await
     }
 }
