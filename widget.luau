@@ -18,6 +18,15 @@ local function panelId()
 	return PLUGIN_ID .. ":details"
 end
 
+local function getBackendIndicator(backend)
+	local btype = backend.type or "gdbus"
+	if btype == "native" then
+		return "● Native"
+	else
+		return "● MPRIS"
+	end
+end
+
 local function render()
 	local backend = noctalia.state.get("sp.backend") or { available = false }
 	local player = noctalia.state.get("sp.player") or {}
@@ -53,12 +62,14 @@ local function render()
 	local container = barWidget.isVertical() and ui.column or ui.row
 	barWidget.render(container({ gap = 5, align = "center" }, children))
 
-	-- Tooltip: "Title — Artist", mirroring the Omaspotify/Omarchy widget.
+	-- Tooltip: "Title — Artist [Backend]", showing backend mode
 	if player.identity and player.trackTitle then
 		local tooltip = player.trackTitle
 		if player.trackArtists and #player.trackArtists > 0 then
 			tooltip = tooltip .. " — " .. player.trackArtists[1]
 		end
+		local indicator = getBackendIndicator(backend)
+		tooltip = tooltip .. " [" .. indicator .. "]"
 		barWidget.setTooltip(tooltip)
 	else
 		barWidget.setTooltip(nil)

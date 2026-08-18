@@ -11,7 +11,7 @@ author = "roddygithub"
 license = "MIT"
 deprecated = false
 icon = "music"
-description = "Spotify controller with album art, seekable progress bar, and playback controls via MPRIS."
+description = "Spotify controller with album art, seekable progress bar, and playback controls (Native librespot or MPRIS)."
 tags = ["bar", "panel", "media"]
 dependencies = []
 
@@ -41,6 +41,29 @@ description_key = "settings.show_album_art.description"
 default = true
 
 [[setting]]
+key = "language"
+type = "select"
+label_key = "settings.language.label"
+description_key = "settings.language.description"
+default = "en"
+options = [
+  { value = "en", label_key = "settings.language.en" },
+  { value = "fr", label_key = "settings.language.fr" },
+]
+
+[[setting]]
+key = "backend_mode"
+type = "select"
+label_key = "settings.backend_mode.label"
+description_key = "settings.backend_mode.description"
+default = "auto"
+options = [
+  { value = "auto", label_key = "settings.backend_mode.auto" },
+  { value = "native", label_key = "settings.backend_mode.native" },
+  { value = "mpris", label_key = "settings.backend_mode.mpris" },
+]
+
+[[setting]]
 key = "filter_player"
 type = "select"
 label_key = "settings.filter_player.label"
@@ -52,7 +75,7 @@ options = [
 ]
 
 # ── Entries ────────────────────────────────────────────────────────────────────
-# Three entries: a background service that talks MPRIS via playerctl, a bar widget, and a panel.
+# Three entries: a background service that talks MPRIS via gdbus (or native Unix socket), a bar widget, and a panel.
 
 [[service]]
 id = "mpris"
@@ -65,8 +88,8 @@ entry = "widget.luau"
 [[panel]]
 id = "details"
 entry = "panel.luau"
-width = 460
-height = 560
+width = 480
+height = 600
 placement = "attached"
 position = "auto"
 open_near_click = true
@@ -76,8 +99,8 @@ capture_keys = ["space", "Return", "n", "p", "Left", "Right", "ctrl+left", "ctrl
 [[panel]]
 id = "details_floating"
 entry = "panel.luau"
-width = 460
-height = 560
+width = 480
+height = 600
 placement = "floating"
 position = "center"
 keyboard_focus = "on_demand"

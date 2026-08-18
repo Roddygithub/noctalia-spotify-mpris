@@ -78,6 +78,15 @@ end
 local dragState = {}   -- dragging = true, position = <microseconds>
 
 -- ── Helpers ────────────────────────────────────────────────────────────────────
+local function getBackendIndicator(backend)
+	local btype = backend.type or "gdbus"
+	if btype == "native" then
+		return "● Native"
+	else
+		return "● MPRIS"
+	end
+end
+
 local function fmtTime(us)
 	if type(us) ~= "number" or us <= 0 then return "0:00" end
 	local s = math.floor(us / 1000000)
@@ -334,15 +343,24 @@ function render()
 	table.insert(body, ui.row({ gap = 8, align = "center" }, {
 		ui.glyph({ name = "music", size = 18, color = "primary" }),
 		ui.label({ text = "Spotify MPRIS", fontSize = 16, fontWeight = "bold", color = "on_surface", flexGrow = 1 }),
+		ui.label({ text = getBackendIndicator(backend), fontSize = 11, color = "primary", fontWeight = "medium" }),
+		(backend.type == "native") and ui.button({ glyph = "login", variant = "ghost", controlSize = "sm", onClick = function() sendCmd({ op = "authenticate" }) end, tooltip = "Authenticate" }) or nil,
 		ui.button({ glyph = "refresh", variant = "ghost", controlSize = "sm", onClick = function() sendCmd({ op = "refresh" }) end, tooltip = "Refresh" }),
 		ui.button({ glyph = "close", variant = "ghost", controlSize = "sm", onClick = function() panel.close() end, tooltip = "Close" }),
 	}))
 
 	if not backend.available then
+		local mode = noctalia.getConfig("backend_mode") or "auto"
+		local msg = mode == "native" and "Native backend not running"
+			or mode == "mpris" and "No MPRIS player available"
+			or "No backend available"
+		local hint = mode == "native" and "Start noctalia-spotify-backend service"
+			or mode == "mpris" and "Start Spotify or another MPRIS player"
+			or "Check backend_mode setting"
 		table.insert(body, ui.column({ gap = 8, padding = 40, align = "center", flexGrow = 1 }, {
 			ui.glyph({ name = "music-off", size = 40, color = "on_surface_variant" }),
-			ui.label({ text = "No MPRIS player available", color = "on_surface_variant" }),
-			ui.label({ text = "Start Spotify or another MPRIS player", fontSize = 11, color = "on_surface/0.5" }),
+			ui.label({ text = msg, color = "on_surface_variant" }),
+			ui.label({ text = hint, fontSize = 11, color = "on_surface/0.5" }),
 		}))
 	elseif not player.identity then
 		table.insert(body, ui.column({ gap = 8, padding = 40, align = "center", flexGrow = 1 }, {
