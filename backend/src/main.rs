@@ -3,11 +3,10 @@
 //! This backend provides a Spotify Connect device that can be controlled via
 //! a Unix socket (JSON lines protocol v1) and serves OAuth on localhost:8000.
 
-mod webapi;
 mod player;
+mod webapi;
 
 use anyhow::{Context, Result};
-use axum::{routing::get, Router};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -44,14 +43,19 @@ async fn main() -> Result<()> {
     let oauth_addr: SocketAddr = "127.0.0.1:8000".parse()?;
     tokio::spawn(async move {
         info!("OAuth server listening on {}", oauth_addr);
-        if let Err(e) = axum::serve(tokio::net::TcpListener::bind(oauth_addr).await.unwrap(), oauth_router).await {
+        if let Err(e) = axum::serve(
+            tokio::net::TcpListener::bind(oauth_addr).await.unwrap(),
+            oauth_router,
+        )
+        .await
+        {
             error!("OAuth server error: {}", e);
         }
     });
 
     // Create player manager
     let (player_tx, player_rx) = async_channel::bounded(32);
-    let mut player_manager = player::PlayerManager::new(webapi.clone(), player_rx).await?;
+    let player_manager = player::PlayerManager::new(webapi.clone(), player_rx).await?;
 
     // Spawn player manager
     tokio::spawn(async move {
@@ -63,7 +67,9 @@ async fn main() -> Result<()> {
     // Unix socket for plugin communication
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
         .unwrap_or_else(|_| format!("/run/user/{}", std::process::id()));
-    let socket_path = PathBuf::from(runtime_dir).join("noctalia-spotify").join("backend.sock");
+    let socket_path = PathBuf::from(runtime_dir)
+        .join("noctalia-spotify")
+        .join("backend.sock");
 
     // Remove old socket if exists
     if socket_path.exists() {
@@ -116,7 +122,6 @@ async fn handle_connection(
     tx: async_channel::Sender<player::PlayerCommand>,
 ) -> Result<()> {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    use tokio_stream::StreamExt;
 
     let (rd, mut wr) = stream.into_split();
     let mut reader = BufReader::new(rd);
@@ -146,15 +151,26 @@ async fn handle_connection(
         };
 
         let id = request.get("id").and_then(|v| v.as_u64()).unwrap_or(0);
-        let command = request.get("command").and_then(|v| v.as_str()).unwrap_or("");
+        let command = request
+            .get("command")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
 
         let response = match command {
             "get_state" => {
                 let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
-                if tx.send(player::PlayerCommand::GetState(resp_tx)).await.is_ok() {
+                if tx
+                    .send(player::PlayerCommand::GetState(resp_tx))
+                    .await
+                    .is_ok()
+                {
                     match resp_rx.await {
-                        Ok(state) => serde_json::json!({ "v": 1, "id": id, "ok": true, "data": state }),
-                        Err(_) => serde_json::json!({ "v": 1, "id": id, "ok": false, "error": { "code": "internal_error", "message": "State channel closed" } })
+                        Ok(state) => {
+                            serde_json::json!({ "v": 1, "id": id, "ok": true, "data": state })
+                        }
+                        Err(_) => {
+                            serde_json::json!({ "v": 1, "id": id, "ok": false, "error": { "code": "internal_error", "message": "State channel closed" } })
+                        }
                     }
                 } else {
                     serde_json::json!({ "v": 1, "id": id, "ok": false, "error": { "code": "internal_error", "message": "Command channel closed" } })
@@ -173,28 +189,48 @@ async fn handle_connection(
                 serde_json::json!({ "v": 1, "id": id, "ok": true })
             }
             "seek" => {
-                let position = request.get("args").and_then(|a| a.get("position")).and_then(|v| v.as_u64()).unwrap_or(0);
+                let position = request
+                    .get("args")
+                    .and_then(|a| a.get("position"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
                 let _ = tx.send(player::PlayerCommand::Seek(position)).await;
                 serde_json::json!({ "v": 1, "id": id, "ok": true })
             }
             "set_volume" => {
-                let volume = request.get("args").and_then(|a| a.get("volume")).and_then(|v| v.as_f64()).unwrap_or(0.5);
+                let volume = request
+                    .get("args")
+                    .and_then(|a| a.get("volume"))
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.5);
                 let _ = tx.send(player::PlayerCommand::SetVolume(volume)).await;
                 serde_json::json!({ "v": 1, "id": id, "ok": true })
             }
             "shuffle" => {
-                let enabled = request.get("args").and_then(|a| a.get("enabled")).and_then(|v| v.as_bool()).unwrap_or(false);
+                let enabled = request
+                    .get("args")
+                    .and_then(|a| a.get("enabled"))
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
                 let _ = tx.send(player::PlayerCommand::Shuffle(enabled)).await;
                 serde_json::json!({ "v": 1, "id": id, "ok": true })
             }
             "repeat" => {
-                let mode = request.get("args").and_then(|a| a.get("mode")).and_then(|v| v.as_str()).unwrap_or("None");
-                let _ = tx.send(player::PlayerCommand::Repeat(mode.to_string())).await;
+                let mode = request
+                    .get("args")
+                    .and_then(|a| a.get("mode"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("None");
+                let _ = tx
+                    .send(player::PlayerCommand::Repeat(mode.to_string()))
+                    .await;
                 serde_json::json!({ "v": 1, "id": id, "ok": true })
             }
             "authenticate" => {
                 let auth_url = webapi::WebApiClient::auth_url();
-                let _ = tx.send(player::PlayerCommand::Authenticate(auth_url.clone())).await;
+                let _ = tx
+                    .send(player::PlayerCommand::Authenticate(auth_url.clone()))
+                    .await;
                 serde_json::json!({ "v": 1, "id": id, "ok": true, "data": { "auth_url": auth_url } })
             }
             "ping" => {

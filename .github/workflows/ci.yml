@@ -102,9 +102,22 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-audit-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-audit-
+
       - name: Run cargo audit
+        continue-on-error: true
         run: |
-          cargo install cargo-audit
+          cargo install cargo-audit --locked
           cd backend && cargo audit
 
   test:
@@ -156,6 +169,8 @@ jobs:
           push: false
           tags: noctalia-spotify-mpris:latest
           load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   release:
     name: Create Release

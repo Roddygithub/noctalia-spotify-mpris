@@ -1,19 +1,16 @@
 //! Spotify Web API client with OAuth and caching
 
 use anyhow::{Context, Result};
-use axum::extract::State;
-use axum::response::IntoResponse;
-use chrono::{DateTime, Duration, Utc};
+use chrono::Utc;
 use reqwest::{Client as HttpClient, StatusCode};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sqlx::Pool;
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use url::Url;
 
 use crate::webapi::cache::Cache;
-use crate::webapi::types::{CachedResponse, PlayerState, TokenResponse, UserProfile};
+use crate::webapi::types::{PlayerState, TokenResponse, UserProfile};
 
 const SPOTIFY_AUTH_URL: &str = "https://accounts.spotify.com/authorize";
 const SPOTIFY_TOKEN_URL: &str = "https://accounts.spotify.com/api/token";
@@ -30,7 +27,9 @@ fn generate_state() -> String {
     use rand::Rng;
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let mut rng = rand::thread_rng();
-    (0..32).map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char).collect()
+    (0..32)
+        .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
+        .collect()
 }
 
 /// Generate PKCE code verifier and challenge
@@ -41,7 +40,9 @@ fn generate_pkce() -> (String, String) {
 
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
     let mut rng = rand::thread_rng();
-    let verifier: String = (0..128).map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char).collect();
+    let verifier: String = (0..128)
+        .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
+        .collect();
 
     let mut hasher = Sha256::new();
     hasher.update(verifier.as_bytes());
@@ -53,6 +54,7 @@ fn generate_pkce() -> (String, String) {
 pub struct WebApiClient {
     http: HttpClient,
     cache: Cache,
+    #[allow(dead_code)]
     pool: Pool<sqlx::Sqlite>,
     token: Arc<RwLock<Option<TokenResponse>>>,
     pkce_verifier: Arc<RwLock<Option<String>>>,
@@ -70,7 +72,8 @@ impl WebApiClient {
         })
     }
 
-    pub async fn initialize(&self) -> Result<()> {
+    #[allow(dead_code)]
+pub async fn initialize(&self) -> Result<()> {
         // Load token from cache
         if let Some(token) = self.cache.get_token().await? {
             if !token.is_expired() {
@@ -99,7 +102,12 @@ impl WebApiClient {
     }
 
     pub async fn exchange_code_for_token(&self, code: &str) -> Result<()> {
-        let verifier = self.pkce_verifier.read().await.clone().context("No PKCE verifier")?;
+        let verifier = self
+            .pkce_verifier
+            .read()
+            .await
+            .clone()
+            .context("No PKCE verifier")?;
 
         let params = [
             ("grant_type", "authorization_code"),
@@ -109,7 +117,8 @@ impl WebApiClient {
             ("code_verifier", &verifier),
         ];
 
-        let resp = self.http
+        let resp = self
+            .http
             .post(SPOTIFY_TOKEN_URL)
             .form(&params)
             .send()
@@ -130,7 +139,12 @@ impl WebApiClient {
     }
 
     pub async fn refresh_token(&self) -> Result<()> {
-        let token = self.token.read().await.clone().context("No token to refresh")?;
+        let token = self
+            .token
+            .read()
+            .await
+            .clone()
+            .context("No token to refresh")?;
         let refresh_token = token.refresh_token.context("No refresh token")?;
 
         let params = [
@@ -139,7 +153,8 @@ impl WebApiClient {
             ("client_id", CLIENT_ID),
         ];
 
-        let resp = self.http
+        let resp = self
+            .http
             .post(SPOTIFY_TOKEN_URL)
             .form(&params)
             .send()
@@ -164,7 +179,7 @@ impl WebApiClient {
     }
 
     async fn get_valid_token(&self) -> Result<String> {
-        let mut token_guard = self.token.write().await;
+        let token_guard = self.token.write().await;
 
         if let Some(token) = token_guard.as_ref() {
             if !token.is_expired() {
@@ -176,11 +191,21 @@ impl WebApiClient {
         drop(token_guard);
         self.refresh_token().await?;
 
-        let token = self.token.read().await.clone().context("Token not available after refresh")?;
+        let token = self
+            .token
+            .read()
+            .await
+            .clone()
+            .context("Token not available after refresh")?;
         Ok(token.access_token)
     }
 
-    async fn request<T: for<'de> Deserialize<'de>>(&self, method: reqwest::Method, endpoint: &str, params: Option<&[(&str, &str)]>) -> Result<T> {
+    async fn request<T: for<'de> Deserialize<'de>>(
+        &self,
+        method: reqwest::Method,
+        endpoint: &str,
+        params: Option<&[(&str, &str)]>,
+    ) -> Result<T> {
         let token = self.get_valid_token().await?;
         let url = format!("{}{}", SPOTIFY_API_BASE, endpoint);
 
@@ -220,67 +245,126 @@ impl WebApiClient {
             device: Option<serde_json::Value>,
             repeat_state: String,
             shuffle_state: bool,
+            #[allow(dead_code)]
             context: Option<serde_json::Value>,
+            #[allow(dead_code)]
             timestamp: i64,
             progress_ms: Option<i64>,
             is_playing: bool,
             item: Option<serde_json::Value>,
         }
 
-        let resp: Option<PlaybackResponse> = self.request(reqwest::Method::GET, "/me/player", None).await?;
+        let resp: Option<PlaybackResponse> = self
+            .request(reqwest::Method::GET, "/me/player", None)
+            .await?;
 
         Ok(resp.map(|r| {
             let item = r.item;
             PlayerState {
                 status: if r.is_playing { "Playing" } else { "Paused" }.to_string(),
-                title: item.as_ref().and_then(|i| i.get("name")).and_then(|n| n.as_str()).unwrap_or("").to_string(),
-                artist: item.as_ref().and_then(|i| i.get("artists")).and_then(|a| a.as_array()).and_then(|arr| arr.first()).and_then(|a| a.get("name")).and_then(|n| n.as_str()).unwrap_or("").to_string(),
-                album: item.as_ref().and_then(|i| i.get("album")).and_then(|a| a.get("name")).and_then(|n| n.as_str()).unwrap_or("").to_string(),
-                art_url: item.as_ref().and_then(|i| i.get("album")).and_then(|a| a.get("images")).and_then(|img| img.as_array()).and_then(|arr| arr.first()).and_then(|i| i.get("url")).and_then(|u| u.as_str()).unwrap_or("").to_string(),
-                track_id: item.as_ref().and_then(|i| i.get("id")).and_then(|id| id.as_str()).unwrap_or("").to_string(),
+                title: item
+                    .as_ref()
+                    .and_then(|i| i.get("name"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                artist: item
+                    .as_ref()
+                    .and_then(|i| i.get("artists"))
+                    .and_then(|a| a.as_array())
+                    .and_then(|arr| arr.first())
+                    .and_then(|a| a.get("name"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                album: item
+                    .as_ref()
+                    .and_then(|i| i.get("album"))
+                    .and_then(|a| a.get("name"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                art_url: item
+                    .as_ref()
+                    .and_then(|i| i.get("album"))
+                    .and_then(|a| a.get("images"))
+                    .and_then(|img| img.as_array())
+                    .and_then(|arr| arr.first())
+                    .and_then(|i| i.get("url"))
+                    .and_then(|u| u.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                track_id: item
+                    .as_ref()
+                    .and_then(|i| i.get("id"))
+                    .and_then(|id| id.as_str())
+                    .unwrap_or("")
+                    .to_string(),
                 position: (r.progress_ms.unwrap_or(0) as u64) * 1000,
-                duration: item.as_ref().and_then(|i| i.get("duration_ms")).and_then(|d| d.as_i64()).unwrap_or(0) as u64 * 1000,
-                volume: r.device.as_ref().and_then(|d| d.get("volume_percent")).and_then(|v| v.as_i64()).unwrap_or(50) as f64 / 100.0,
+                duration: item
+                    .as_ref()
+                    .and_then(|i| i.get("duration_ms"))
+                    .and_then(|d| d.as_i64())
+                    .unwrap_or(0) as u64
+                    * 1000,
+                volume: r
+                    .device
+                    .as_ref()
+                    .and_then(|d| d.get("volume_percent"))
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(50) as f64
+                    / 100.0,
                 shuffle: r.shuffle_state,
                 loop_status: match r.repeat_state.as_str() {
                     "track" => "Track",
                     "context" => "Playlist",
                     _ => "None",
-                }.to_string(),
+                }
+                .to_string(),
             }
         }))
     }
 
     pub async fn play_pause(&self, play: bool) -> Result<()> {
-        let endpoint = if play { "/me/player/play" } else { "/me/player/pause" };
-        self.request::<()>(reqwest::Method::PUT, endpoint, None).await
+        let endpoint = if play {
+            "/me/player/play"
+        } else {
+            "/me/player/pause"
+        };
+        self.request::<()>(reqwest::Method::PUT, endpoint, None)
+            .await
     }
 
     pub async fn next(&self) -> Result<()> {
-        self.request::<()>(reqwest::Method::POST, "/me/player/next", None).await
+        self.request::<()>(reqwest::Method::POST, "/me/player/next", None)
+            .await
     }
 
     pub async fn previous(&self) -> Result<()> {
-        self.request::<()>(reqwest::Method::POST, "/me/player/previous", None).await
+        self.request::<()>(reqwest::Method::POST, "/me/player/previous", None)
+            .await
     }
 
     pub async fn seek(&self, position_ms: u64) -> Result<()> {
         let pos_str = position_ms.to_string();
         let params = [("position_ms", pos_str.as_str())];
-        self.request::<()>(reqwest::Method::PUT, "/me/player/seek", Some(&params)).await
+        self.request::<()>(reqwest::Method::PUT, "/me/player/seek", Some(&params))
+            .await
     }
 
     pub async fn set_volume(&self, volume: f64) -> Result<()> {
         let vol = (volume * 100.0).round() as u32;
         let vol_str = vol.to_string();
         let params = [("volume_percent", vol_str.as_str())];
-        self.request::<()>(reqwest::Method::PUT, "/me/player/volume", Some(&params)).await
+        self.request::<()>(reqwest::Method::PUT, "/me/player/volume", Some(&params))
+            .await
     }
 
     pub async fn set_shuffle(&self, shuffle: bool) -> Result<()> {
         let state_str = shuffle.to_string();
         let params = [("state", state_str.as_str())];
-        self.request::<()>(reqwest::Method::PUT, "/me/player/shuffle", Some(&params)).await
+        self.request::<()>(reqwest::Method::PUT, "/me/player/shuffle", Some(&params))
+            .await
     }
 
     pub async fn set_repeat(&self, mode: &str) -> Result<()> {
@@ -290,10 +374,12 @@ impl WebApiClient {
             _ => "off",
         };
         let params = [("state", state)];
-        self.request::<()>(reqwest::Method::PUT, "/me/player/repeat", Some(&params)).await
+        self.request::<()>(reqwest::Method::PUT, "/me/player/repeat", Some(&params))
+            .await
     }
 
-    pub async fn get_user_profile(&self) -> Result<UserProfile> {
+    #[allow(dead_code)]
+pub async fn get_user_profile(&self) -> Result<UserProfile> {
         self.request(reqwest::Method::GET, "/me", None).await
     }
 }

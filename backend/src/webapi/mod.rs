@@ -5,7 +5,8 @@ pub mod client;
 pub mod responses;
 pub mod types;
 
-use axum::{routing::get, Router, response::IntoResponse};
+use axum::response::IntoResponse;
+use axum::{routing::get, Router};
 use std::sync::Arc;
 
 pub use client::WebApiClient;

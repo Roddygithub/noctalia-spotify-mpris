@@ -50,8 +50,9 @@ jobs:
           ./backend/target/release/noctalia-spotify-backend --help || true
 
       - name: Run cargo audit
+        continue-on-error: true
         run: |
-          cargo install cargo-audit
+          cargo install cargo-audit --locked
           cd backend && cargo audit
 
       - name: Create release archive

@@ -3,14 +3,14 @@
 //! This is a simplified version that doesn't use librespot directly.
 //! For full Spotify Connect support, librespot integration would be needed.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::interval;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info};
 
-use crate::webapi::WebApiClient;
 use crate::webapi::types::PlayerState;
+use crate::webapi::WebApiClient;
 
 #[derive(Debug)]
 pub enum PlayerCommand {
@@ -32,7 +32,10 @@ pub struct PlayerManager {
 }
 
 impl PlayerManager {
-    pub async fn new(webapi: Arc<WebApiClient>, rx: async_channel::Receiver<PlayerCommand>) -> Result<Self> {
+    pub async fn new(
+        webapi: Arc<WebApiClient>,
+        rx: async_channel::Receiver<PlayerCommand>,
+    ) -> Result<Self> {
         let playback_state = Arc::new(tokio::sync::RwLock::new(None));
 
         Ok(Self {
@@ -42,7 +45,7 @@ impl PlayerManager {
         })
     }
 
-    pub async fn run(mut self) -> Result<()> {
+    pub async fn run(self) -> Result<()> {
         // Start playback state polling
         let webapi = self.webapi.clone();
         let playback_state = self.playback_state.clone();
@@ -65,7 +68,10 @@ impl PlayerManager {
                 }
                 PlayerCommand::PlayPause => {
                     let state = self.playback_state.read().await.clone();
-                    let play = state.as_ref().map(|s| s.status != "Playing").unwrap_or(true);
+                    let play = state
+                        .as_ref()
+                        .map(|s| s.status != "Playing")
+                        .unwrap_or(true);
                     if let Err(e) = self.webapi.play_pause(play).await {
                         error!("Play/pause failed: {}", e);
                     }

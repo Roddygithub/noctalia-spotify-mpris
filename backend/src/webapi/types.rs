@@ -30,6 +30,7 @@ impl TokenResponse {
 
 /// Cached API response
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[allow(dead_code)]
 pub struct CachedResponse {
     pub id: Uuid,
     pub endpoint: String,
@@ -41,6 +42,7 @@ pub struct CachedResponse {
 
 /// Currently playing track state
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct PlaybackState {
     pub device: Option<Device>,
     pub repeat_state: String,
@@ -55,6 +57,7 @@ pub struct PlaybackState {
 
 /// Device info
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct Device {
     pub id: String,
     pub is_active: bool,
@@ -68,6 +71,7 @@ pub struct Device {
 
 /// Playback context (album, playlist, etc.)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct Context {
     pub uri: String,
     pub href: String,
@@ -77,6 +81,7 @@ pub struct Context {
 
 /// Playback actions available
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct PlaybackActions {
     pub interrupting_playback: bool,
     pub pausing: bool,
@@ -92,6 +97,7 @@ pub struct PlaybackActions {
 
 /// Track object
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct Track {
     pub id: String,
     pub name: String,
@@ -112,6 +118,7 @@ pub struct Track {
 
 /// Artist object
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct Artist {
     pub id: String,
     pub name: String,
@@ -122,6 +129,7 @@ pub struct Artist {
 
 /// Album object
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct Album {
     pub id: String,
     pub name: String,
@@ -137,6 +145,7 @@ pub struct Album {
 
 /// Image object
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct Image {
     pub url: String,
     pub height: Option<i32>,
@@ -166,6 +175,7 @@ pub struct Followers {
 
 /// Top tracks response
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct TopTracksResponse {
     pub items: Vec<Track>,
     pub total: i32,
@@ -178,6 +188,7 @@ pub struct TopTracksResponse {
 
 /// Recently played response
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct RecentlyPlayedResponse {
     pub items: Vec<PlayHistoryItem>,
     pub total: i32,
@@ -190,6 +201,7 @@ pub struct RecentlyPlayedResponse {
 
 /// Play history item
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct PlayHistoryItem {
     pub track: Track,
     pub played_at: DateTime<Utc>,
@@ -198,6 +210,7 @@ pub struct PlayHistoryItem {
 
 /// Search response
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct SearchResponse {
     pub tracks: SearchResult<Track>,
     pub artists: SearchResult<Artist>,
@@ -207,6 +220,7 @@ pub struct SearchResponse {
 
 /// Generic search result
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct SearchResult<T> {
     pub items: Vec<T>,
     pub total: i32,
@@ -219,6 +233,7 @@ pub struct SearchResult<T> {
 
 /// Playlist object
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct Playlist {
     pub id: String,
     pub name: String,
@@ -235,6 +250,7 @@ pub struct Playlist {
 
 /// Playlist tracks object
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct PlaylistTracks {
     pub href: String,
     pub total: i32,

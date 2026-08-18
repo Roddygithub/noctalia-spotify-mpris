@@ -1,11 +1,11 @@
 //! SQLite cache for OAuth tokens and API responses
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
-use sqlx::{Pool, Sqlite, Row};
+use sqlx::{Pool, Row, Sqlite};
 use uuid::Uuid;
 
-use crate::webapi::types::{CachedResponse, TokenResponse};
+use crate::webapi::types::TokenResponse;
 
 /// Token cache key
 const TOKEN_CACHE_KEY: &str = "spotify_oauth_token";
@@ -125,6 +125,7 @@ impl Cache {
     }
 
     /// Clear OAuth token
+    #[allow(dead_code)]
     pub async fn clear_token(&self) -> Result<()> {
         sqlx::query("DELETE FROM oauth_tokens WHERE key = ?")
             .bind(TOKEN_CACHE_KEY)
@@ -134,6 +135,7 @@ impl Cache {
     }
 
     /// Get cached API response
+    #[allow(dead_code)]
     pub async fn get(&self, endpoint: &str, params_hash: &str) -> Result<Option<String>> {
         let row = sqlx::query(
             "SELECT response_json FROM api_cache WHERE endpoint = ? AND params_hash = ? AND expires_at > ?"
@@ -148,7 +150,14 @@ impl Cache {
     }
 
     /// Store API response in cache
-    pub async fn set(&self, endpoint: &str, params_hash: &str, response_json: &str, ttl_seconds: i64) -> Result<()> {
+    #[allow(dead_code)]
+    pub async fn set(
+        &self,
+        endpoint: &str,
+        params_hash: &str,
+        response_json: &str,
+        ttl_seconds: i64,
+    ) -> Result<()> {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now();
         let expires_at = now + Duration::seconds(ttl_seconds);
@@ -176,6 +185,7 @@ impl Cache {
     }
 
     /// Clean expired cache entries
+    #[allow(dead_code)]
     pub async fn cleanup(&self) -> Result<u64> {
         let result = sqlx::query("DELETE FROM api_cache WHERE expires_at <= ?")
             .bind(Utc::now().to_rfc3339())
