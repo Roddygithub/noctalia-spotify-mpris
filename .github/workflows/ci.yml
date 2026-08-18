@@ -98,7 +98,7 @@ jobs:
 
       - name: Build
         run: cd backend && cargo build --release
-        timeout-minutes: 10
+        timeout-minutes: 15
 
       - name: Verify binary
         run: ./backend/target/release/noctalia-spotify-backend --help || true
