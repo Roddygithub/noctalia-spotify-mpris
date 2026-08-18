@@ -83,6 +83,9 @@ jobs:
       - name: Check formatting
         run: cd backend && cargo fmt --check
 
+      - name: Clippy version
+        run: cargo clippy --version
+
       - name: Clippy
         run: cd backend && cargo clippy -- -D warnings
 
