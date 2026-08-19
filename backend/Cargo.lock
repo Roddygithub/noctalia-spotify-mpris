@@ -325,6 +325,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "bon"
+version = "3.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a602c73c7b0148ec6d12af6fd5cc7a46e2eacc8878271a999abac56eed12f561"
+dependencies = [
+ "bon-macros",
+ "rustversion",
+]
+
+[[package]]
+name = "bon-macros"
+version = "3.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6dee98b0db6a962de883bf5d20362dee4d7ca0d12fe39a7c6c73c844e1cd7c1f"
+dependencies = [
+ "darling 0.20.11",
+ "ident_case",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2250,7 +2275,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "uuid",
- "vergen 9.1.0",
+ "vergen 10.0.2",
  "vergen-lib 0.1.6",
 ]
 
@@ -2621,6 +2646,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
  "zerocopy 0.8.56",
+]
+
+[[package]]
+name = "prettyplease"
+version = "0.2.37"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "479ca8adacdd7ce8f1fb39ce9ecccbfe93a3f1344b3d0d97f20bc0196208f62b"
+dependencies = [
+ "proc-macro2",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -4138,14 +4173,14 @@ dependencies = [
 
 [[package]]
 name = "vergen"
-version = "9.1.0"
+version = "10.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b849a1f6d8639e8de261e81ee0fc881e3e3620db1af9f2e0da015d4382ceaf75"
+checksum = "3fd02b50246a773d6b8f48cf8e4e623a2773fd31cbe697bf10289abbb17e9e87"
 dependencies = [
  "anyhow",
- "derive_builder",
+ "bon",
  "rustversion",
- "vergen-lib 9.1.0",
+ "vergen-lib 10.0.2",
 ]
 
 [[package]]
@@ -4161,12 +4196,12 @@ dependencies = [
 
 [[package]]
 name = "vergen-lib"
-version = "9.1.0"
+version = "10.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b34a29ba7e9c59e62f229ae1932fb1b8fb8a6fdcc99215a641913f5f5a59a569"
+checksum = "7d6a4e23de0fd3f8a940650a4d83eca980e9ef8f108fe6ddeb5313b0313523d3"
 dependencies = [
  "anyhow",
- "derive_builder",
+ "bon",
  "rustversion",
 ]
 
