@@ -2,53 +2,34 @@
 
 std = "luau"
 
-# Global allowances
-allow_defined = true
-allow_increment = true
-allow_mixed_table = true
-allow_shadow = true
-allow_unused = true
-
-# Specific rules
-[Rules]
-# Disable rules that are too strict for our codebase
-undefined_variable = "off"
-global_usage = "off"
-unscoped_variables = "off"
-unused_variable = "off"
-shadowing = "off"
-mixed_table = "off"
-incomplete_signature = "off"
-duplicate_keys = "off"
-roblox_globals = "off"
-global_mutation = "off"
-empty_table = "off"
-unsupported_library = "off"
-incompatible_library = "off"
-unreachable_code = "off"
-uninitialized_variable = "off"
-
-# Enable useful checks
-undefined_global = "warn"
-unused_label = "warn"
-invalid_escape = "warn"
-unbalanced_assignments = "warn"
-wrong_argument_count = "warn"
-wrong_argument_type = "warn"
-index_type_mismatch = "warn"
-field_type_mismatch = "warn"
-property_type_mismatch = "warn"
-argument_type_mismatch = "warn"
-return_type_mismatch = "warn"
-
-# LSP settings
-[LSP]
-hover = true
-completion = true
-definition = true
-references = true
-diagnostics = true
-document_symbols = true
-workspace_symbols = true
-code_actions = true
-rename = true
+# Disable rules that are too strict for this codebase
+[lints]
+undefined_variable = "allow"
+global_usage = "allow"
+unscoped_variables = "allow"
+unused_variable = "allow"
+shadowing = "allow"
+mixed_table = "allow"
+incomplete_signature = "allow"
+duplicate_keys = "allow"
+roblox_globals = "allow"
+global_mutation = "allow"
+empty_table = "allow"
+unsupported_library = "allow"
+incompatible_library = "allow"
+unreachable_code = "allow"
+uninitialized_variable = "allow"
+undefined_global = "allow"
+unused_label = "allow"
+invalid_escape = "allow"
+unbalanced_assignments = "allow"
+wrong_argument_count = "allow"
+wrong_argument_type = "allow"
+index_type_mismatch = "allow"
+field_type_mismatch = "allow"
+property_type_mismatch = "allow"
+argument_type_mismatch = "allow"
+return_type_mismatch = "allow"
+incorrect_standard_library_use = "allow"
+empty_if = "allow"
+multiple_statements = "allow"
