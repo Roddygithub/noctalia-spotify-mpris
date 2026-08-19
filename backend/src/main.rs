@@ -38,6 +38,11 @@ async fn main() -> Result<()> {
     // Create web API client
     let webapi = Arc::new(webapi::WebApiClient::new(pool.clone()).await?);
 
+    // Load cached OAuth token so playback works across restarts
+    if let Err(e) = webapi.initialize().await {
+        error!("Failed to load cached token: {}", e);
+    }
+
     // Start OAuth server on localhost:8000
     let oauth_router = webapi::oauth_router(webapi.clone());
     let oauth_addr: SocketAddr = "127.0.0.1:8000".parse()?;

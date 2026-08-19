@@ -117,11 +117,10 @@ impl WebApiClient {
 
     #[allow(dead_code)]
     pub async fn initialize(&self) -> Result<()> {
-        // Load token from cache
+        // Load token from cache. Load even if expired so the refresh_token is
+        // available to get_valid_token() when it needs to refresh.
         if let Some(token) = self.cache.get_token().await? {
-            if !token.is_expired() {
-                *self.token.write().await = Some(token);
-            }
+            *self.token.write().await = Some(token);
         }
         Ok(())
     }
@@ -267,7 +266,7 @@ impl WebApiClient {
         Ok(token.access_token)
     }
 
-    async fn request<T: for<'de> Deserialize<'de>>(
+    async fn request<T: for<'de> Deserialize<'de> + 'static>(
         &self,
         method: reqwest::Method,
         endpoint: &str,
@@ -282,6 +281,14 @@ impl WebApiClient {
             req = req.query(p);
         }
 
+        // Spotify rejects bodyless PUT/POST with 411 Length Required.
+        // Params go in the query string, so the body is always empty here.
+        // reqwest's body("") sends chunked encoding; the API needs a real
+        // Content-Length: 0 header.
+        if matches!(method, reqwest::Method::PUT | reqwest::Method::POST) {
+            req = req.header("Content-Length", "0");
+        }
+
         let resp = req.send().await?;
 
         if resp.status() == StatusCode::UNAUTHORIZED {
@@ -289,9 +296,12 @@ impl WebApiClient {
             self.refresh_token().await?;
             let new_token = self.get_valid_token().await?;
 
-            let mut req = self.http.request(method, &url).bearer_auth(&new_token);
+            let mut req = self.http.request(method.clone(), &url).bearer_auth(&new_token);
             if let Some(p) = params {
                 req = req.query(p);
+            }
+            if matches!(method, reqwest::Method::PUT | reqwest::Method::POST) {
+                req = req.header("Content-Length", "0");
             }
             let resp = req.send().await?;
             return Ok(resp.json().await?);
@@ -303,7 +313,19 @@ impl WebApiClient {
             anyhow::bail!("API error {}: {}", status, err_text);
         }
 
-        Ok(resp.json().await?)
+        // Control commands (play/pause/next/...) expect () and Spotify returns a
+        // non-JSON body on success, so skip parsing entirely for the unit type.
+        if std::any::TypeId::of::<T>() == std::any::TypeId::of::<()>() {
+            return Ok(serde_json::from_str("null")?);
+        }
+
+        // Some endpoints return an empty body. serde_json can't parse "" into T,
+        // so return the default value in that case.
+        let text = resp.text().await?;
+        if text.trim().is_empty() {
+            return Ok(serde_json::from_str("null")?);
+        }
+        Ok(serde_json::from_str(&text)?)
     }
 
     pub async fn get_playback_state(&self) -> Result<Option<PlayerState>> {
