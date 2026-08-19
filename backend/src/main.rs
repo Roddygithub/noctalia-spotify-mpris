@@ -89,13 +89,15 @@ async fn main() -> Result<()> {
 
     // Handle socket connections
     let socket_tx = player_tx.clone();
+    let socket_webapi = webapi.clone();
     tokio::spawn(async move {
         loop {
             match listener.accept().await {
                 Ok((stream, _)) => {
                     let tx = socket_tx.clone();
+                    let webapi = socket_webapi.clone();
                     tokio::spawn(async move {
-                        if let Err(e) = handle_connection(stream, tx).await {
+                        if let Err(e) = handle_connection(stream, tx, webapi).await {
                             warn!("Connection error: {}", e);
                         }
                     });
@@ -120,6 +122,7 @@ async fn main() -> Result<()> {
 async fn handle_connection(
     stream: tokio::net::UnixStream,
     tx: async_channel::Sender<player::PlayerCommand>,
+    webapi: std::sync::Arc<webapi::WebApiClient>,
 ) -> Result<()> {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
@@ -226,13 +229,20 @@ async fn handle_connection(
                     .await;
                 serde_json::json!({ "v": 1, "id": id, "ok": true })
             }
-            "authenticate" => {
-                let auth_url = webapi::WebApiClient::auth_url();
-                let _ = tx
-                    .send(player::PlayerCommand::Authenticate(auth_url.clone()))
-                    .await;
-                serde_json::json!({ "v": 1, "id": id, "ok": true, "data": { "auth_url": auth_url } })
-            }
+            "authenticate" => match webapi.auth_url().await {
+                Ok(auth_url) => {
+                    let _ = tx
+                        .send(player::PlayerCommand::Authenticate(auth_url.clone()))
+                        .await;
+                    serde_json::json!({ "v": 1, "id": id, "ok": true, "data": { "auth_url": auth_url } })
+                }
+                Err(e) => serde_json::json!({
+                    "v": 1,
+                    "id": id,
+                    "ok": false,
+                    "error": { "code": "config_error", "message": e.to_string() }
+                }),
+            },
             "ping" => {
                 serde_json::json!({ "v": 1, "id": id, "ok": true })
             }

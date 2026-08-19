@@ -1,10 +1,11 @@
 //! Spotify Web API client with OAuth and caching
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use reqwest::{Client as HttpClient, StatusCode};
 use serde::Deserialize;
 use sqlx::Pool;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use url::Url;
@@ -16,11 +17,49 @@ const SPOTIFY_AUTH_URL: &str = "https://accounts.spotify.com/authorize";
 const SPOTIFY_TOKEN_URL: &str = "https://accounts.spotify.com/api/token";
 const SPOTIFY_API_BASE: &str = "https://api.spotify.com/v1";
 
-// Client ID for the Noctalia Spotify app (public, can be rotated)
-const CLIENT_ID: &str = "your-client-id-here";
+const CLIENT_ID_ENV: &str = "SPOTIFY_CLIENT_ID";
 // Redirect URI must match Spotify Developer Dashboard
 const REDIRECT_URI: &str = "http://localhost:8000/callback";
 const SCOPES: &str = "user-read-playback-state user-modify-playback-state user-read-currently-playing streaming user-read-email user-read-private user-library-read user-top-read playlist-read-private playlist-read-collaborative";
+
+/// Resolve the Spotify client ID from SPOTIFY_CLIENT_ID env var,
+/// then a config file in the backend config dir.
+fn load_client_id() -> Option<String> {
+    if let Ok(id) = std::env::var(CLIENT_ID_ENV) {
+        let id = id.trim().to_string();
+        if !id.is_empty() && id != "your-client-id-here" {
+            return Some(id);
+        }
+    }
+
+    // Fall back to config file
+    let config_dir = dirs::config_dir()?.join("noctalia-spotify-backend");
+    let config_file = config_dir.join("config.toml");
+    if let Ok(contents) = std::fs::read_to_string(&config_file) {
+        for line in contents.lines() {
+            let line = line.trim();
+            if let Some((key, value)) = line.split_once('=') {
+                if key.trim() == "client_id" {
+                    let id = value.trim().trim_matches('"').to_string();
+                    if !id.is_empty() && id != "your-client-id-here" {
+                        return Some(id);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Path to the backend config file (for documentation / setup)
+#[allow(dead_code)]
+pub fn config_file_path() -> PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("noctalia-spotify-backend")
+        .join("config.toml")
+}
 
 /// Generate a random state for OAuth
 fn generate_state() -> String {
@@ -58,6 +97,7 @@ pub struct WebApiClient {
     pool: Pool<sqlx::Sqlite>,
     token: Arc<RwLock<Option<TokenResponse>>>,
     pkce_verifier: Arc<RwLock<Option<String>>>,
+    oauth_state: Arc<RwLock<Option<String>>>,
 }
 
 impl WebApiClient {
@@ -69,6 +109,7 @@ impl WebApiClient {
             pool,
             token: Arc::new(RwLock::new(None)),
             pkce_verifier: Arc::new(RwLock::new(None)),
+            oauth_state: Arc::new(RwLock::new(None)),
         })
     }
 
@@ -83,13 +124,25 @@ impl WebApiClient {
         Ok(())
     }
 
-    pub fn auth_url() -> String {
-        let (_, challenge) = generate_pkce();
+    /// Generate an authorization URL and store the PKCE verifier + state.
+    /// Must be called on the same instance that later exchanges the code.
+    pub async fn auth_url(&self) -> Result<String> {
+        let client_id = load_client_id().context(format!(
+            "No Spotify client ID configured. Set {} env var or create a config.toml in {}",
+            CLIENT_ID_ENV,
+            config_file_path().display()
+        ))?;
+
+        let (verifier, challenge) = generate_pkce();
         let state = generate_state();
+
+        // Store verifier and state for the callback
+        *self.pkce_verifier.write().await = Some(verifier);
+        *self.oauth_state.write().await = Some(state.clone());
 
         let mut url = Url::parse(SPOTIFY_AUTH_URL).unwrap();
         url.query_pairs_mut()
-            .append_pair("client_id", CLIENT_ID)
+            .append_pair("client_id", &client_id)
             .append_pair("response_type", "code")
             .append_pair("redirect_uri", REDIRECT_URI)
             .append_pair("scope", SCOPES)
@@ -98,22 +151,29 @@ impl WebApiClient {
             .append_pair("state", &state)
             .append_pair("show_dialog", "true");
 
-        url.to_string()
+        Ok(url.to_string())
+    }
+
+    /// Validate the OAuth state parameter to prevent CSRF
+    pub async fn validate_state(&self, state: &str) -> bool {
+        let expected = self.oauth_state.read().await.clone().unwrap_or_default();
+        !expected.is_empty() && expected == state
     }
 
     pub async fn exchange_code_for_token(&self, code: &str) -> Result<()> {
+        let client_id = load_client_id().context("No Spotify client ID configured")?;
         let verifier = self
             .pkce_verifier
             .read()
             .await
             .clone()
-            .context("No PKCE verifier")?;
+            .context("No PKCE verifier. Call auth_url() before exchanging the code.")?;
 
         let params = [
             ("grant_type", "authorization_code"),
             ("code", code),
             ("redirect_uri", REDIRECT_URI),
-            ("client_id", CLIENT_ID),
+            ("client_id", &client_id),
             ("code_verifier", &verifier),
         ];
 
@@ -126,7 +186,7 @@ impl WebApiClient {
 
         if !resp.status().is_success() {
             let err: serde_json::Value = resp.json().await?;
-            anyhow::bail!("Token exchange failed: {}", err);
+            bail!("Token exchange failed: {}", err);
         }
 
         let mut token: TokenResponse = resp.json().await?;
@@ -135,10 +195,15 @@ impl WebApiClient {
         self.cache.set_token(&token).await?;
         *self.token.write().await = Some(token);
 
+        // Clear one-time PKCE verifier and state
+        *self.pkce_verifier.write().await = None;
+        *self.oauth_state.write().await = None;
+
         Ok(())
     }
 
     pub async fn refresh_token(&self) -> Result<()> {
+        let client_id = load_client_id().context("No Spotify client ID configured")?;
         let token = self
             .token
             .read()
@@ -150,7 +215,7 @@ impl WebApiClient {
         let params = [
             ("grant_type", "refresh_token"),
             ("refresh_token", &refresh_token),
-            ("client_id", CLIENT_ID),
+            ("client_id", &client_id),
         ];
 
         let resp = self

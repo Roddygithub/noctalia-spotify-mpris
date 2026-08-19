@@ -19,10 +19,16 @@ pub fn oauth_router(webapi: Arc<WebApiClient>) -> Router {
 }
 
 async fn oauth_login(
-    axum::extract::State(_webapi): axum::extract::State<Arc<WebApiClient>>,
-) -> axum::response::Redirect {
-    let auth_url = WebApiClient::auth_url();
-    axum::response::Redirect::to(&auth_url)
+    axum::extract::State(webapi): axum::extract::State<Arc<WebApiClient>>,
+) -> axum::response::Response {
+    match webapi.auth_url().await {
+        Ok(url) => axum::response::Redirect::to(&url).into_response(),
+        Err(e) => format!(
+            "Configuration error: {}.<br>Set SPOTIFY_CLIENT_ID and restart the backend.",
+            e
+        )
+        .into_response(),
+    }
 }
 
 async fn oauth_callback(
@@ -40,6 +46,13 @@ async fn oauth_callback(
         Some(c) => c,
         None => return "Missing code parameter".into_response(),
     };
+
+    // Validate state to prevent CSRF
+    if let Some(state) = params.get("state") {
+        if !webapi.validate_state(state).await {
+            return "Invalid state parameter (CSRF protection)".into_response();
+        }
+    }
 
     match webapi.exchange_code_for_token(&code).await {
         Ok(_) => "Authentication successful! You can close this window.".into_response(),

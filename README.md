@@ -80,6 +80,32 @@ systemctl --user enable --now noctalia-spotify-backend
 ls $XDG_RUNTIME_DIR/noctalia-spotify/backend.sock
 ```
 
+### Spotify Client ID (required for native mode OAuth)
+
+The native backend uses OAuth to access your Spotify account. You need a Spotify app:
+
+1. Create an app at <https://developer.spotify.com/dashboard>
+2. Add `http://localhost:8000/callback` as a **Redirect URI**
+3. Configure the client ID in one of two ways:
+
+**Option A — config file** (`~/.config/noctalia-spotify-backend/config.toml`):
+```toml
+client_id = "your-app-client-id"
+```
+
+**Option B — environment variable** (in `~/.config/systemd/user/noctalia-spotify-backend.service`):
+```
+[Service]
+Environment=SPOTIFY_CLIENT_ID=your-app-client-id
+```
+
+Then restart the backend:
+```bash
+systemctl --user restart noctalia-spotify-backend
+```
+
+Click the **Authenticate** button in the plugin panel (or open `http://localhost:8000/login`), approve in your browser, and the token is cached locally.
+
 ## Configuration
 
 Open settings via right-click on widget or:
@@ -178,6 +204,7 @@ Add to your Hyprland/Noctalia keybinds:
 **Native backend: "Authenticate" button does nothing**
 - Check backend logs: `journalctl --user -u noctalia-spotify-backend -f`
 - Backend serves OAuth on `http://localhost:8000` — open in browser
+- Ensure a Spotify `client_id` is configured (see "Spotify Client ID" above)
 
 ## License
 
