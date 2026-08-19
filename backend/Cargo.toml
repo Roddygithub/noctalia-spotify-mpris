@@ -5,7 +5,7 @@ edition = "2021"
 description = "Native Spotify Connect backend for Noctalia using librespot"
 
 [dependencies]
-librespot = { git = "https://github.com/librespot-org/librespot", tag = "v0.4.2" }
+librespot = { git = "https://github.com/librespot-org/librespot", tag = "v0.8.0" }
 tokio = { version = "1.38", features = ["full", "rt-multi-thread"] }
 reqwest = { version = "0.12", features = ["json", "rustls-tls", "cookies", "blocking"] }
 serde = { version = "1.0", features = ["derive"] }
