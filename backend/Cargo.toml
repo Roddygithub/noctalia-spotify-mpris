@@ -21,7 +21,7 @@ async-channel = "2.0"
 lazy_static = "1.4"
 url = "2.5"
 base64 = "0.22"
-axum = { version = "0.7", features = ["macros"] }
+axum = { version = "0.8", features = ["macros"] }
 tower-http = { version = "0.5", features = ["cors"] }
 tokio-stream = "0.1"
 futures = "0.3"
