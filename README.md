@@ -85,7 +85,7 @@ ls $XDG_RUNTIME_DIR/noctalia-spotify/backend.sock
 The native backend uses OAuth to access your Spotify account. You need a Spotify app:
 
 1. Create an app at <https://developer.spotify.com/dashboard>
-2. Add `http://localhost:8000/callback` as a **Redirect URI**
+2. Add `http://127.0.0.1:8000/callback` as a **Redirect URI** (note: Spotify no longer accepts `http://localhost:...` — the loopback IP literal `127.0.0.1` is required)
 3. Configure the client ID in one of two ways:
 
 **Option A — config file** (`~/.config/noctalia-spotify-backend/config.toml`):

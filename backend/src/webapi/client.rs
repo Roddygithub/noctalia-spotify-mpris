@@ -18,8 +18,10 @@ const SPOTIFY_TOKEN_URL: &str = "https://accounts.spotify.com/api/token";
 const SPOTIFY_API_BASE: &str = "https://api.spotify.com/v1";
 
 const CLIENT_ID_ENV: &str = "SPOTIFY_CLIENT_ID";
-// Redirect URI must match Spotify Developer Dashboard
-const REDIRECT_URI: &str = "http://localhost:8000/callback";
+// Redirect URI must match Spotify Developer Dashboard.
+// Spotify no longer allows localhost aliases — use the loopback
+// IP literal explicitly.
+const REDIRECT_URI: &str = "http://127.0.0.1:8000/callback";
 const SCOPES: &str = "user-read-playback-state user-modify-playback-state user-read-currently-playing streaming user-read-email user-read-private user-library-read user-top-read playlist-read-private playlist-read-collaborative";
 
 /// Resolve the Spotify client ID from SPOTIFY_CLIENT_ID env var,
