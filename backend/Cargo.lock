@@ -2235,7 +2235,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "librespot",
- "rand 0.8.7",
+ "rand 0.10.2",
  "reqwest",
  "rodio 0.14.0",
  "serde",
