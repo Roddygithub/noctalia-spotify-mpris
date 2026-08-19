@@ -31,7 +31,7 @@ sha2 = "0.10"
 # Force specific versions to avoid conflicts
 cpal = "0.13"
 rodio = "0.14"
-vergen = "9.1.0"
+vergen = "10.0.2"
 vergen-lib = "0.1.6"
 
 # librespot engine dependencies
