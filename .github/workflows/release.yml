@@ -26,8 +26,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev pkg-config libssl-dev
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.97.1
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -44,10 +51,10 @@ jobs:
 
       - name: Build backend
         run: cd backend && cargo build --release
+        timeout-minutes: 15
 
       - name: Verify binary
-        run: |
-          ./backend/target/release/noctalia-spotify-backend --help || true
+        run: test -x backend/target/release/noctalia-spotify-backend && file backend/target/release/noctalia-spotify-backend
 
       - name: Run cargo audit
         continue-on-error: true
