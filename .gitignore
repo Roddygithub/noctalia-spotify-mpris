@@ -1,0 +1,20 @@
+# Rust build artifacts
+/target/
+**/target/
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Cargo
+Cargo.lock.orig
+
+# Local config
+*.local.toml

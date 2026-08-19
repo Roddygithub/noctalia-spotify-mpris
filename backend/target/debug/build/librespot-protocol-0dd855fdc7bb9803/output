@@ -1,1 +1,0 @@
-cargo:rustc-env=PROTO_MOD_RS=/home/roddy/noctalia-spotify-mpris/backend/target/debug/build/librespot-protocol-0dd855fdc7bb9803/out/mod.rs
