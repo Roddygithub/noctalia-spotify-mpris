@@ -2251,7 +2251,7 @@ dependencies = [
  "url",
  "uuid",
  "vergen 9.1.0",
- "vergen-lib 0.1.6",
+ "vergen-lib",
 ]
 
 [[package]]
@@ -4145,18 +4145,7 @@ dependencies = [
  "anyhow",
  "derive_builder",
  "rustversion",
- "vergen-lib 9.1.0",
-]
-
-[[package]]
-name = "vergen-lib"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b07e6010c0f3e59fcb164e0163834597da68d1f864e2b8ca49f74de01e9c166"
-dependencies = [
- "anyhow",
- "derive_builder",
- "rustversion",
+ "vergen-lib",
 ]
 
 [[package]]
