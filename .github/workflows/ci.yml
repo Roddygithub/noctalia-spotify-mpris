@@ -20,6 +20,7 @@ jobs:
         run: |
           curl -sL -o selene.zip https://github.com/Kampfkarren/selene/releases/download/0.27.0/selene-0.27.0-linux.zip
           unzip -o selene.zip -d selene-bin
+          chmod +x selene-bin/selene
           sudo mv selene-bin/selene /usr/local/bin/selene
           selene --version
 
