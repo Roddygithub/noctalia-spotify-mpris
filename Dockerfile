@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.82-bookworm AS builder
+FROM rust:1.97-bookworm AS builder
 
 WORKDIR /app
 
@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     libsqlite3-dev \
+    libasound2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Cargo files
@@ -35,6 +36,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     libsqlite3-0 \
+    libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binary and assets
