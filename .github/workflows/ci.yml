@@ -57,6 +57,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev pkg-config libssl-dev
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -77,9 +82,6 @@ jobs:
 
       - name: Print Rust version
         run: rustc --version && cargo --version
-
-      - name: Clean target
-        run: rm -rf backend/target
 
       - name: Check formatting
         run: cd backend && cargo fmt --check
