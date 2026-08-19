@@ -100,6 +100,7 @@ pub struct WebApiClient {
     token: Arc<RwLock<Option<TokenResponse>>>,
     pkce_verifier: Arc<RwLock<Option<String>>>,
     oauth_state: Arc<RwLock<Option<String>>>,
+    on_token_updated: Arc<tokio::sync::Mutex<Option<Box<dyn FnOnce(String) + Send + Sync>>>>,
 }
 
 impl WebApiClient {
@@ -112,7 +113,17 @@ impl WebApiClient {
             token: Arc::new(RwLock::new(None)),
             pkce_verifier: Arc::new(RwLock::new(None)),
             oauth_state: Arc::new(RwLock::new(None)),
+            on_token_updated: Arc::new(tokio::sync::Mutex::new(None)),
         })
+    }
+
+    /// Set a callback to be invoked when a new access token is obtained.
+    /// Called after successful OAuth token exchange or refresh.
+    pub async fn set_on_token_updated<F>(&self, callback: F)
+    where
+        F: FnOnce(String) + Send + Sync + 'static,
+    {
+        *self.on_token_updated.lock().await = Some(Box::new(callback));
     }
 
     #[allow(dead_code)]
@@ -194,11 +205,17 @@ impl WebApiClient {
         token.obtained_at = Some(Utc::now());
 
         self.cache.set_token(&token).await?;
+        let access_token = token.access_token.clone();
         *self.token.write().await = Some(token);
 
         // Clear one-time PKCE verifier and state
         *self.pkce_verifier.write().await = None;
         *self.oauth_state.write().await = None;
+
+        // Invoke token updated callback if set
+        if let Some(cb) = self.on_token_updated.lock().await.take() {
+            cb(access_token);
+        }
 
         Ok(())
     }
@@ -264,6 +281,12 @@ impl WebApiClient {
             .clone()
             .context("Token not available after refresh")?;
         Ok(token.access_token)
+    }
+
+    /// Get the current access token for librespot engine (does not refresh).
+    pub async fn get_access_token(&self) -> Option<String> {
+        let token = self.token.read().await;
+        token.as_ref().map(|t| t.access_token.clone())
     }
 
     async fn request<T: for<'de> Deserialize<'de> + 'static>(

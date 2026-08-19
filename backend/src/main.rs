@@ -5,13 +5,16 @@
 
 mod player;
 mod webapi;
+mod librespot_engine;
 
 use anyhow::{Context, Result};
+use librespot_engine::{LibrespotEngine, player_event_to_state};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::net::UnixListener;
 use tokio::signal;
+use tokio::sync::{mpsc, RwLock};
 use tracing::{error, info, warn};
 
 #[tokio::main]
@@ -43,6 +46,19 @@ async fn main() -> Result<()> {
         error!("Failed to load cached token: {}", e);
     }
 
+    // Shared state for the librespot engine (started after auth)
+    let engine_state = Arc::new(RwLock::new(None::<LibrespotEngine>));
+    let engine_state_for_oauth = engine_state.clone();
+    let _engine_state_for_player = engine_state.clone();
+    let cache_dir = config_dir.join("librespot");
+    std::fs::create_dir_all(&cache_dir)?;
+    let cache_for_engine = Arc::new(librespot::core::cache::Cache::new(
+        Some(&cache_dir),
+        Some(&cache_dir),
+        Some(&cache_dir),
+        None,
+    )?);
+
     // Start OAuth server on localhost:8000
     let oauth_router = webapi::oauth_router(webapi.clone());
     let oauth_addr: SocketAddr = "127.0.0.1:8000".parse()?;
@@ -57,6 +73,82 @@ async fn main() -> Result<()> {
             error!("OAuth server error: {}", e);
         }
     });
+
+    // Set callback to start librespot engine when OAuth token is obtained
+    {
+        let engine_state = engine_state_for_oauth.clone();
+        let cache = cache_for_engine.clone();
+        let webapi = webapi.clone();
+        webapi.set_on_token_updated(move |access_token| {
+            let engine_state = engine_state.clone();
+            let cache = cache.clone();
+            tokio::spawn(async move {
+                info!("Starting librespot engine after OAuth...");
+                match LibrespotEngine::start(
+                    access_token,
+                    "Noctalia".to_string(),
+                    cache,
+                )
+                .await
+                {
+                    Ok((engine, mut event_rx)) => {
+                        *engine_state.write().await = Some(engine);
+                        info!("Librespot engine started successfully after OAuth");
+                        tokio::spawn(async move {
+                            while let Some(event) = event_rx.recv().await {
+                                if let Some((status, position_ms, track_id)) = player_event_to_state(&event) {
+                                    info!("Librespot event: {} @ {}ms track={}", status, position_ms, track_id);
+                                }
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        warn!("Failed to start librespot engine: {}", e);
+                    }
+                }
+            });
+        }).await;
+    }
+
+    // Try to start librespot engine if token is already cached
+    {
+        let webapi = webapi.clone();
+        let engine_state = engine_state_for_oauth.clone();
+        let cache = cache_for_engine.clone();
+        tokio::spawn(async move {
+            // Wait a bit for initialize() to load the token
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            if let Some(token) = webapi.get_access_token().await {
+                info!("Starting librespot engine with cached token...");
+                match LibrespotEngine::start(
+                    token,
+                    "Noctalia".to_string(),
+                    cache,
+                )
+                .await
+                {
+                    Ok((engine, mut event_rx)) => {
+                        *engine_state.write().await = Some(engine);
+                        info!("Librespot engine started successfully");
+                        // Forward player events to update state
+                        tokio::spawn(async move {
+                            while let Some(event) = event_rx.recv().await {
+                                if let Some((status, position_ms, track_id)) = player_event_to_state(&event) {
+                                    info!("Librespot event: {} @ {}ms track={}", status, position_ms, track_id);
+                                    // TODO: merge with WebAPI state
+                                }
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        warn!("Failed to start librespot engine: {}", e);
+                    }
+                }
+            } else {
+                info!("No cached token; librespot engine will start after OAuth");
+            }
+        });
+    }
 
     // Create player manager
     let (player_tx, player_rx) = async_channel::bounded(32);
